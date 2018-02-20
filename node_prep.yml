@@ -3,6 +3,8 @@
 - name: Node prep
   hosts: ocp-all:bastion
   gather_facts: yes
+  # strategy: free -- allows plays to execute regardless of how fast each node completes, since this playbook isn't node-interdependent.
+  strategy: free
   tasks:
     - name: Subscribe and Entitle the Systems
       redhat_subscription:
