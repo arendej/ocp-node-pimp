@@ -1,0 +1,58 @@
+# #FOR GNS based labs  Use this inventory
+# [all:vars]
+# org=6931563
+
+# [ocp:vars]
+# sm_infra_pool=8a85f9815c9ddc84015c9e31b9344b11
+# activation_key=OCP
+
+# [gluster:vars]
+# sm_infra_pool=8a85f98c5f6ea4e3015f71240f231ae5
+# activation_key=GLUSTER
+
+# [ocp]
+# 10.100.1.11
+# 10.100.1.12
+# 10.100.1.13
+# 10.100.1.21
+# 10.100.1.22
+# 10.100.1.31
+# 10.100.1.32
+# 10.100.1.33
+
+# [gluster]
+# 10.100.1.81
+# 10.100.1.82
+# 10.100.1.83
+
+# [windows]
+# 10.100.1.100
+
+# [firewall]
+# 10.100.1.1
+
+# [tower]
+# 10.100.1.5
+
+---
+- name: Node prep
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Subscribe and Entitle the Systems
+      redhat_subscription:
+        activationkey: "{{ activation_key }}"
+        org_id: "{{ org }}"
+    - name: Get Repolist
+      shell: /etc/yum.repos.d/redhat.repo | grep "\["
+      register: repolist
+      changed_when: false
+      failed_when: false
+    - name: Disable Repos
+      ini_file:
+        path: /etc/yum.repos.d/redhat.repo
+        section: "{{ item }}"
+        option: enabled
+        value: 0
+      with_items:
+        - "{{ repolist.stdout_lines }}"

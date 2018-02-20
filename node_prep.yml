@@ -1,0 +1,93 @@
+#  ansible-playbook -i node_list -u root -k node_prep.yml 
+---
+- name: Node prep
+  hosts: ocp-all:bastion
+  gather_facts: yes
+  tasks:
+    - name: Subscribe and Entitle the Systems
+      redhat_subscription:
+        activationkey: "{{ activation_key }}"
+        org_id: "{{ org }}"
+    - name: Get Repolist
+      shell: /etc/yum.repos.d/redhat.repo | grep "\["
+      register: repolist
+      changed_when: false
+      failed_when: false
+    - name: Disable Repos
+      ini_file:
+        path: /etc/yum.repos.d/redhat.repo
+        section: "{{ item }}"
+        option: enabled
+        value: 0
+      with_items:
+        - "{{ repolist.stdout_lines }}"
+    - name: Enable Repos
+      ini_file:
+        path: /etc/yum.repos.d/redhat.repo
+        section: "{{ item }}"
+        option: enabled
+        value: 1
+      with_items:
+        - "rhel-7-server-rpms"
+        - "rhel-7-server-extras-rpms"
+        - "rhel-7-server-ose-3.6-rpms"
+        - "rhel-7-fast-datapath-rpms"
+    - name: Install Packages
+      yum:
+        name: "{{ item }}"
+        state: latest
+        update_cache: yes
+      with_items:
+        - "wget"
+        - "git"
+        - "net-tools"
+        - "bind-utils"
+        - "iptables-services"
+        - "bridge-utils"
+        - "bash-completion"
+        - "kexec-tools"
+        - "sos"
+        - "psacct"
+        - "atomic-openshift-utils"
+    - name: Update Packages
+      yum:
+        name: '*'
+        state: latest
+        update_cache: yes
+      notify: Reboot the hosts
+  handlers:
+    - name: reboot the nodes
+      shell: 'sleep 2 && /sbin/shutdown -r now "Controlled reboot from Ansible"'
+      async: 1
+      poll: 0
+      ignore_errors: yes
+      when: inventory_hostname not in groups[bastion]
+
+- name: Install Atomic tools and Docker
+  hosts: ocp-all
+  tasks: 
+    - name: wait for the nodes to come back
+      wait_for_connection:
+        delay: 30
+        timeout: 300
+    - name: Install Atomic Tools
+      yum: 
+        name: "{{  item  }}"
+        state: latest
+      with_items: 
+        - atomic-openshift-excluder
+        - atomic-openshift-docker-excluder
+        - docker
+    - name: Set GlusterFS SELinux Setting
+      command: "setsebool -P virt_sandbox_use_fusefs on"
+    - name: Set Docker Storage file
+      template: 
+        src: docker-storage-setup.j2
+        dest: /etc/sysconfig/docker-storage-setup
+    - name: Create Docker Storage
+      command: "docker-storage-setup"
+    - name: Start docker
+      service: 
+        name: docker
+        state: started
+        enabled: true

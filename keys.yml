@@ -1,0 +1,11 @@
+# Need to generate your keys first and/or potentially customize the source of the pub key below
+#
+---
+- name: Keys
+  hosts: ocp-all:glusterfs
+  gather_facts: no
+  tasks:
+    - name: Distribute Keys
+      authorized_key:
+        user: root
+        key: "{{ lookup('file','~/.ssh/id_rsa.pub') }}"
