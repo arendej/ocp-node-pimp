@@ -5,6 +5,8 @@
   gather_facts: yes
   # strategy: free -- allows plays to execute regardless of how fast each node completes, since this playbook isn't node-interdependent.
   strategy: free
+  vars:
+    ocpver: 3.6
   tasks:
     - name: Subscribe and Entitle the Systems
       redhat_subscription:
