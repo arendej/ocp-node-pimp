@@ -32,7 +32,7 @@
       with_items:
         - "rhel-7-server-rpms"
         - "rhel-7-server-extras-rpms"
-        - "rhel-7-server-ose-3.6-rpms"
+        - "rhel-7-server-ose-{{ ocpver }}-rpms"
         - "rhel-7-fast-datapath-rpms"
     - name: Install Packages
       yum:
